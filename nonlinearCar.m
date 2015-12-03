@@ -142,7 +142,7 @@ plObj=psObj_A.plotByEa('g');
 hold on
 % psObj_A.plotByIa('r',plObj);  % internal apprx. of reach set 1 (green)
 
-for i=1:5:size(crsObjVec,2)
+for i=size(crsObjVec,2)
     psObj_A = crsObjVec(i).projection(basisMat);  % reach set projection
     %psObj_B = rsObj_B.projection(basisMat);  % reach set projection
     

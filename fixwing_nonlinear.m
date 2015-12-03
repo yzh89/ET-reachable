@@ -19,61 +19,68 @@ else
     Nd = 7;    % discretization for angle;
     T_end = 4;
     
+    P_lat = zeros(7,12);
+    P_lat(1,1)=1;
+    P_lat(2,2)=1;
+    P_lat(3,4)=1;
+    P_lat(4,5)=1;
+    P_lat(5,10)=1;
+    P_lat(6,12)=1;
+    P_lat(7,7)=1;
+    P_lat(8,9)=1;
     
-    P.pn0    = 0;  % initial North position
-    P.pe0    = 0;  % initial East position
-    P.v0     = 0;  % initial velocity along body y-axis
-    P.p0     = 0;  % initial body frame roll rate
-    P.r0     = 0;  % initial body frame yaw rate
-    P.phi0   = 0;  % initial roll angle
-    P.psi0   = 0;  % initial yaw angle
     
-    psi0_A=linspace(-pi/2,pi/2,Nd+1)+pi/2/Nd;
-    psig_A=linspace(-pi/2,pi/2,Nd+1);
+    x_0_lat = P_lat*x_trim;
+    u_lat_cent = [0 1 0 0; 0 0 1 0]*u_trim;
+    Bc_ = B_lat*[0 1 0 0; 0 0 1 0]';
+    Bc = [zeros(3, size(Bc_,2)); Bc_];
+    
+    
+    phi0=x_0_lat(4);
+    psi0=linspace(-pi/2+x_0_lat(5),pi/2+x_0_lat(5),Nd+1)+pi/2/Nd;
+    psig=linspace(-pi/2+x_0_lat(5),pi/2+x_0_lat(5),Nd+1);
 
-    Ac_A = cell(Nd,1);
+    Ac = cell(Nd,1);
     for i=1:Nd
-        Ac_A_ = [ cos(psi0_A(i)) -sin(psi0_A(i)) 0; ...
-                    sin(psi0_A(i)) cos(psi0_A(i) 0;...
-                    0 0 1];
-        Ac_A{i} = [Ac_A_ zeros(3, 
+        Ac_ = [ 0 0 cos(psi0(i)) -cos(phi0)*sin(psi0(i)); ...
+                0 0 sin(psi0(i)) cos(phi0)*cos(psi0(i)); ...
+                0 0 0 0];
+        Ac{i} = [Ac_ zeros(3, size(A_lat,1)-1);zeros(size(A_lat,1),3),A_lat];
     end
-    Bc = [0;0;1];
     
     % control bounds
-    Ku = 0.1*[1; 1];
+    Ku = [pi/4+u_lat_cent(1),pi/4+u_lat_cent(2);...
+          pi/4-u_lat_cent(1), pi/4-u_lat_cent(2)];
     centVec = -diff(Ku)/2;
     shMat = diag((Ku(1,:)-centVec).^2,0);
     uBoundsEllObj = ellipsoid(centVec', shMat);
     
     % initial directions (some random vectors in R^4):
     %dirsMat = [diag([1 1 pi/6]),rand(3,6)];
-    %dirsMat=[[eye(3);zeros(7,3)],rand(10,7)];
-    load('result_fixedwing_0.mat','dirsMat')
+    dirsMat=[eye(7,7),rand(7,7)];
+    %load('result_fixedwing_0.mat','dirsMat')
     
     % uBoundsEllObj=uBoundsEllObj.getShape(1.5);
     % plot(uBoundsEllObj)
     
     % linear system for system A
     for i=1:Nd
-        lsys_A{i} = elltool.linsys.LinSysContinuous(Ac_A{i}, Bc, uBoundsEllObj);
+        lsys_A{i} = elltool.linsys.LinSysContinuous(Ac{i}, Bc, uBoundsEllObj);
     end
     % time interval
     timeVec = [0 T_end];
     
     % initial conditions:
-    th0_A=0;
-    th0_B=-pi;
-    x0EllObj_A = [zeros(2,1); th0_A] + ellipsoid(diag([0.01,0.01,0.0001]));
-    x0EllObj_B= [20*ones(2,1); th0_B] + ellipsoid(diag([0.01,0.01,0.0001]));
+    psi0=x_0_lat(5);
+    x0EllObj = [x_0_lat] + ellipsoid(diag([0.01,0.01, 0.001, 0.00001, 0.001, 0.000001, 0.000001]));
     
     % reach set
-    startI_=find(thg_A<=th0_A);
+    startI_=find(psig<=psi0);
     startI=startI_(end);
-    rsObj_A = elltool.reach.ReachContinuous(lsys_A{startI}, x0EllObj_A, dirsMat, timeVec,...
+    rsObj_A = elltool.reach.ReachContinuous(lsys_A{startI}, x0EllObj, dirsMat, timeVec,...
         'isRegEnabled', true, 'isJustCheck', false, 'regTol', 1e-7);
-    grdHypObj_1 = hyperplane([0; 0; 1], thg_A(startI+1));
-    grdHypObj_2 = hyperplane([0; 0; -1], -thg_A(startI));
+    grdHypObj_1 = hyperplane([0; 0; 1], psig(startI+1));
+    grdHypObj_2 = hyperplane([0; 0; -1], -psig(startI));
     % %rsObj_B = elltool.reach.ReachContinuous(lsys, x0EllObj_B, dirsMat, timeVec,...
     % %    'isRegEnabled', true, 'isJustCheck', false, 'regTol', 1e-7);
     save result_fixedwing_0;
@@ -119,19 +126,19 @@ else
     min(indNonEmptyVec)
     max(indNonEmptyVec)
     
-    crsObjVec = [];
-    for iInd = 1:size(indNonEmptyVec, 2)
-        intersectEllVec_tmp = intersectEllVec(1,indNonEmptyVec(iInd));
-        for i=2:size(intersectEllVec,1);
-            intersectEllVec_tmp = intersectEllVec_tmp.intersection_ea(intersectEllVec(i,indNonEmptyVec(iInd)));
-        end
-        curTimeLimVec=[t_axis(indNonEmptyVec(iInd)-1) T_end];
-        rsObj = elltool.reach.ReachContinuous(lsys_A{startI+1},...
-            intersectEllVec_tmp, ...
-            dirsMat, curTimeLimVec,'isRegEnabled',true, 'isJustCheck', false, 'regTol', 1e-7);
-        crsObjVec = [crsObjVec rsObj];
-    end
-    save('result_fixedwing','crsObjVec');
+%     crsObjVec = [];
+%     for iInd = 1:size(indNonEmptyVec, 2)
+%         intersectEllVec_tmp = intersectEllVec(1,indNonEmptyVec(iInd));
+%         for i=2:size(intersectEllVec,1);
+%             intersectEllVec_tmp = intersectEllVec_tmp.intersection_ea(intersectEllVec(i,indNonEmptyVec(iInd)));
+%         end
+%         curTimeLimVec=[t_axis(indNonEmptyVec(iInd)-1) T_end];
+%         rsObj = elltool.reach.ReachContinuous(lsys_A{startI+1},...
+%             intersectEllVec_tmp, ...
+%             dirsMat, curTimeLimVec,'isRegEnabled',true, 'isJustCheck', false, 'regTol', 1e-7);
+%         crsObjVec = [crsObjVec rsObj];
+%     end
+%     save('result_fixedwing','crsObjVec');
 end
 %%
 if plotting
@@ -156,7 +163,7 @@ end
 end
 
 %%
-[x0,x0shMat]=x0EllObj_A.double();
+[x0,x0shMat]=x0EllObj.double();
 % [ctrMat, ttVec] = rsObj_B.get_center();
 xB=[4,0.5,-pi]';
 [qc,Qc]=findControlSet_nonlinear(x0,x0shMat,xB,Ac_A{startI},Bc,centVec',shMat);

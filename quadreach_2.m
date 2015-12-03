@@ -1,7 +1,7 @@
 %function quadreach()
 clear
 elltool.setconf('accurate')
-use_old=true;
+use_old=false;
 if use_old
     load result
 else
