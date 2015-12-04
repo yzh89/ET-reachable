@@ -51,7 +51,7 @@ cvx_precision high
 cvx_end
 
 qc=q;
-Qc=q
+Qc=Q
 %%
 n=10;
 cvx_begin SDP

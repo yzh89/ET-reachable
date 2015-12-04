@@ -15,6 +15,10 @@ set(gca, ...
 
 grid on
 
+axis([0, 4 -3, 5 -5 5])
+
+OptionZ.FrameRate=15;OptionZ.Duration=5.5;OptionZ.Periodic=true;
+CaptureFigVid([-20,10;-110,10;-190,80;-290,10;-380,10], 'testvid',OptionZ)
 %%
 % reachable set
 grid off
@@ -51,3 +55,7 @@ set(gca, ...
   'FontSize'    , 16);
 
 grid on
+axis([-0.2, 0.4 -0.2, 0.2 -0.2 0.2])
+
+OptionZ.FrameRate=15;OptionZ.Duration=5.5;OptionZ.Periodic=true;
+CaptureFigVid([-20,10;-110,10;-190,80;-290,10;-380,10], 'testvid',OptionZ)
