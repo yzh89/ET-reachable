@@ -67,24 +67,13 @@ else
     % plot(uBoundsEllObj)
     
     % linear system for system A
-    Amat = [0 0 1 0 0 0 0 0 ;
-0 0 0 1 0 0 0 0;
-0 0 0 0 0 0 0 0;
-0 0 0 -0.43 4.55 -16.37 9.27 0;
-0 0 0 -2.1 -7.8 3.51 0 0;
-0 0 0 2.29 -0.23 -4.7 0 0;
-0 0 0 0 1 0.26 0 0;
-0 0 0 0 0 1.01 0 0;
-];
 
-Bmat = [0 0;0 0; 0 0; 0 -1.26; 30 36.7; 12 -2.8; 0 0; 0 0];
     for i=1:Nd
         lsys_A{i} = elltool.linsys.LinSysContinuous(Ac{i}, Bc, uBoundsEllObj);
     end
     % time interval
     timeVec = [0 T_end];
     
-    lsys = elltool.linsys.LinSysContinuous(Amat, Bmat, uBoundsEllObj);
     
     % initial conditions:
     x0EllObj = [x_0_lat] + ellipsoid(diag([0.01,0.01, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001]));
@@ -92,7 +81,7 @@ Bmat = [0 0;0 0; 0 0; 0 -1.26; 30 36.7; 12 -2.8; 0 0; 0 0];
     % reach set
     startI_=find(psig<=psi0_);
     startI=startI_(end);
-    rsObj_A = elltool.reach.ReachContinuous(lsys, x0EllObj, dirsMat, timeVec,...
+    rsObj_A = elltool.reach.ReachContinuous(lsys_A{startI}, x0EllObj, dirsMat, timeVec,...
         'isRegEnabled', true, 'isJustCheck', false, 'regTol', 1e-7);
     grdHypObj_1 = hyperplane([0; 0; 1], psig(startI+1));
     grdHypObj_2 = hyperplane([0; 0; -1], -psig(startI));
