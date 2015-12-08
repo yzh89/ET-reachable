@@ -19,26 +19,29 @@ else
     Nd = 7;    % discretization for angle;
     T_end = 4;
     
-    P_lat = zeros(7,12);
-    P_lat(1,1)=1;
-    P_lat(2,2)=1;
-    P_lat(3,4)=1;
-    P_lat(4,5)=1;
-    P_lat(5,10)=1;
-    P_lat(6,12)=1;
-    P_lat(7,7)=1;
-    P_lat(8,9)=1;
+    P_lat = zeros(8,12);
+    P_lat(1,1)=1; % x
+    P_lat(2,2)=1; % y
+    P_lat(3,4)=1; % u 
+    P_lat(4,5)=1; % v
+    P_lat(5,10)=1; %p
+    P_lat(6,12)=1; %r
+    P_lat(7,7)=1; % phi
+    P_lat(8,9)=1; % psi
     
     
     x_0_lat = P_lat*x_trim;
+    %x_0_lat = [0 0 16 0 -0.0298 0.1073 0.1957 0]';
     u_lat_cent = [0 1 0 0; 0 0 1 0]*u_trim;
+    %u_lat_cent = [0.0316, -0.0425]';
     Bc_ = B_lat*[0 1 0 0; 0 0 1 0]';
     Bc = [zeros(3, size(Bc_,2)); Bc_];
     
     
-    phi0=x_0_lat(4);
-    psi0=linspace(-pi/2+x_0_lat(5),pi/2+x_0_lat(5),Nd+1)+pi/2/Nd;
-    psig=linspace(-pi/2+x_0_lat(5),pi/2+x_0_lat(5),Nd+1);
+    phi0=x_0_lat(7);
+    psi0_=x_0_lat(8);
+    psi0=linspace(-pi/2+psi0_,pi/2+psi0_,Nd+1)+pi/2/Nd;
+    psig=linspace(-pi/2+psi0_,pi/2+psi0_,Nd+1);
 
     Ac = cell(Nd,1);
     for i=1:Nd
@@ -57,27 +60,39 @@ else
     
     % initial directions (some random vectors in R^4):
     %dirsMat = [diag([1 1 pi/6]),rand(3,6)];
-    dirsMat=[eye(7,7),rand(7,7)];
+    dirsMat=[eye(8,8),rand(8,8)];
     %load('result_fixedwing_0.mat','dirsMat')
     
     % uBoundsEllObj=uBoundsEllObj.getShape(1.5);
     % plot(uBoundsEllObj)
     
     % linear system for system A
+    Amat = [0 0 1 0 0 0 0 0 ;
+0 0 0 1 0 0 0 0;
+0 0 0 0 0 0 0 0;
+0 0 0 -0.43 4.55 -16.37 9.27 0;
+0 0 0 -2.1 -7.8 3.51 0 0;
+0 0 0 2.29 -0.23 -4.7 0 0;
+0 0 0 0 1 0.26 0 0;
+0 0 0 0 0 1.01 0 0;
+];
+
+Bmat = [0 0;0 0; 0 0; 0 -1.26; 30 36.7; 12 -2.8; 0 0; 0 0];
     for i=1:Nd
         lsys_A{i} = elltool.linsys.LinSysContinuous(Ac{i}, Bc, uBoundsEllObj);
     end
     % time interval
     timeVec = [0 T_end];
     
+    lsys = elltool.linsys.LinSysContinuous(Amat, Bmat, uBoundsEllObj);
+    
     % initial conditions:
-    psi0=x_0_lat(5);
-    x0EllObj = [x_0_lat] + ellipsoid(diag([0.01,0.01, 0.001, 0.00001, 0.001, 0.000001, 0.000001]));
+    x0EllObj = [x_0_lat] + ellipsoid(diag([0.01,0.01, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001]));
     
     % reach set
-    startI_=find(psig<=psi0);
+    startI_=find(psig<=psi0_);
     startI=startI_(end);
-    rsObj_A = elltool.reach.ReachContinuous(lsys_A{startI}, x0EllObj, dirsMat, timeVec,...
+    rsObj_A = elltool.reach.ReachContinuous(lsys, x0EllObj, dirsMat, timeVec,...
         'isRegEnabled', true, 'isJustCheck', false, 'regTol', 1e-7);
     grdHypObj_1 = hyperplane([0; 0; 1], psig(startI+1));
     grdHypObj_2 = hyperplane([0; 0; -1], -psig(startI));
