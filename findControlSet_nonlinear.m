@@ -1,7 +1,7 @@
 function [q_c,Q_c]= findControlSet_nonlinear(x0,x0shMat,xB,Ac,Bc,q0,Q0)
 %clear;
 %load result
-T=4;
+T=10;
 % basisMat = [1 zeros(1,9); 0 1 zeros(1,8); 0 0 1 zeros(1,7)]';  % orthogonal basis of (x1, x2) subspace
 % psObj_A = rsObj_A.projection(basisMat);  % reach set projection
 % psObj_A = psObj_A.cut(T);
@@ -12,8 +12,8 @@ T=4;
 %xB=ctrMat(:,end);
 
 % assume lstar. n is number of control variables
-l=[0;1;0];
-n = 1;
+l=[0;1;0;0;0;0;0;0];
+n = 2;
 l=l/norm(l);
 
 %%
