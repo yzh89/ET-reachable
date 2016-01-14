@@ -103,36 +103,36 @@ plot3(0:0.1:10,x_star(:,1)',x_star(:,3)');
 %psObj_B.plotByEa('y',plObj);
 %psObj_B.plotByIa('b',plObj);
 
-%%
-if use_old_inter
-    load result_fixedwing
-else
-    [exEllMat_A, t_axis]= rsObj_A.get_ea();
-    
-    grdHypObj_1 = hyperplane([zeros(7,1); 1], thetag(startI+1));
-    grdHypObj_2 = hyperplane([zeros(7,1); -1], -thetag(startI));
-    
-    intersectEllVec = exEllMat_A.hpintersection(grdHypObj_1);
-    indNonEmptyVec = all(~isEmpty(intersectEllVec));
-    
-    indNonEmptyVec = find(indNonEmptyVec);
-    min(indNonEmptyVec)
-    max(indNonEmptyVec)
-    
-%     crsObjVec = [];
-%     for iInd = 1:size(indNonEmptyVec, 2)
-%         intersectEllVec_tmp = intersectEllVec(1,indNonEmptyVec(iInd));
-%         for i=2:size(intersectEllVec,1);
-%             intersectEllVec_tmp = intersectEllVec_tmp.intersection_ea(intersectEllVec(i,indNonEmptyVec(iInd)));
-%         end
-%         curTimeLimVec=[t_axis(indNonEmptyVec(iInd)-1) T_end];
-%         rsObj = elltool.reach.ReachContinuous(lsys_A{startI+1},...
-%             intersectEllVec_tmp, ...
-%             dirsMat, curTimeLimVec,'isRegEnabled',true, 'isJustCheck', false, 'regTol', 1e-7);
-%         crsObjVec = [crsObjVec rsObj];
-%     end
-%     save('result_fixedwing','crsObjVec');
-end
+% %%
+% if use_old_inter
+%     load result_fixedwing
+% else
+%     [exEllMat_A, t_axis]= rsObj_A.get_ea();
+%     
+%     grdHypObj_1 = hyperplane([zeros(4,1); 1;0], pi/20);
+%     grdHypObj_2 = hyperplane([zeros(4,1); -1;0], -pi/20);
+%     
+%     intersectEllVec = exEllMat_A.hpintersection(grdHypObj_1);
+%     indNonEmptyVec = all(~isEmpty(intersectEllVec));
+%     
+%     indNonEmptyVec = find(indNonEmptyVec);
+%     min(indNonEmptyVec)
+%     max(indNonEmptyVec)
+%     
+% %     crsObjVec = [];
+% %     for iInd = 1:size(indNonEmptyVec, 2)
+% %         intersectEllVec_tmp = intersectEllVec(1,indNonEmptyVec(iInd));
+% %         for i=2:size(intersectEllVec,1);
+% %             intersectEllVec_tmp = intersectEllVec_tmp.intersection_ea(intersectEllVec(i,indNonEmptyVec(iInd)));
+% %         end
+% %         curTimeLimVec=[t_axis(indNonEmptyVec(iInd)-1) T_end];
+% %         rsObj = elltool.reach.ReachContinuous(lsys_A{startI+1},...
+% %             intersectEllVec_tmp, ...
+% %             dirsMat, curTimeLimVec,'isRegEnabled',true, 'isJustCheck', false, 'regTol', 1e-7);
+% %         crsObjVec = [crsObjVec rsObj];
+% %     end
+% %     save('result_fixedwing','crsObjVec');
+% end
 %%
 % if plotting
 % basisMat = [1 zeros(1,7); 0 1 zeros(1,6)]';  % orthogonal basis of (x1, x2) subspace
@@ -158,10 +158,40 @@ end
 %%
 [x0,x0shMat]=x0EllObj.double();
 % [ctrMat, ttVec] = rsObj_B.get_center();
-xB=[160,5,0, 0, 0 ,0 ,0, -pi]';
-[qc,Qc]=findControlSet_nonlinear(x0,x0shMat,xB,Ac{startI},Bc,centVec',shMat);
+xB=[160,0, 0 ,0, 0, 5]';
+[qc,Qc]=findControlSet_nonlinear(x0,x0shMat,xB,Ac,Bc,centVec',shMat);
 
-plot(ellipsoid(qc{4},Qc{4}'*Qc{4}))
+%%
+iter=1;
+q=qc{iter};
+Q=Qc{iter};
+uBoundsEllObj_cu = ellipsoid(q, Q);
+
+lsys_cu = elltool.linsys.LinSysContinuous(Ac, Bc, uBoundsEllObj_cu);
+rsObj_A = elltool.reach.ReachContinuous(lsys_cu, x0EllObj, dirsMat, timeVec,...
+    'isRegEnabled', true, 'isJustCheck', false, 'regTol', 1e-5);
+basisMat = [1 zeros(1,5); zeros(1,5) 1]';  % orthogonal basis of (x1, x2) subspace
+psObj_A = rsObj_A.projection(basisMat);  % reach set projection
+
+psObj_copy = psObj_A.getCopyWithCenterModified(x_star(1:end-1,[1,3]));
+
+plotA=psObj_copy.cut(T_end);
+plObj=plotA.plotByEa('g'); % to have the use of plObj isn't necessary
+
+hold on
+plotA.plotByIa('r',plObj);
+
+%project to see the whoe reachable set for x y dimension
+% psObj_A = rsObj_A.projection(basisMat);  % reach set projection
+%psObj_B = rsObj_B.projection(basisMat);  % reach set projection
+
+% to have the use of plObj isn't necessary
+plObj=psObj_copy.plotByEa('g');  % external apprx. of reach set 1 (red)
+hold on
+psObj_copy.plotByIa('r',plObj);  % internal apprx. of reach set 1 (green)
+plot3(0:0.1:10,x_star(:,1)',x_star(:,3)');
+
+
 
 % %%
 %

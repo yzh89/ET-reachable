@@ -12,7 +12,7 @@ T=10;
 %xB=ctrMat(:,end);
 
 % assume lstar. n is number of control variables
-l=[0;1;0;0;0;0;0;0];
+l=[0;0;0;0;0;1];
 n = 2;
 l=l/norm(l);
 
@@ -39,7 +39,7 @@ GGint=integral(f,0,T,'ArrayValued',1);
 %    (expm(Ac*T))'*l ))*l'*Gint*Bc;
 fc=( xB'*l - l'*expm(Ac*T)*x0 - sqrt(l'*expm(Ac*T)*x0shMat*...
     (expm(Ac*T))'*l ) );
-k_v=0.5:0.1:1.2;
+k_v=2:1:5;
 for iter=1:length(k_v)
     k=k_v(iter);
 cvx_begin SDP
@@ -49,7 +49,7 @@ cvx_precision high
     variable Q(n,n) semidefinite;
     variable lambda
     lambda > 0
-    %fc- GGint(1)*norm(Q,2)-l'*Gint*Bc*q >=0
+    fc- GGint(1)*norm(Q,2)-l'*Gint*Bc*q >=0
     [1-lambda zeros(1,n) (q-q0)';
         zeros(n,1) lambda*eye(n) Q;
         q-q0 Q Q0] >=0
