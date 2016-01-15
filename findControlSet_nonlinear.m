@@ -1,4 +1,4 @@
-function [q_c,Q_c]= findControlSet_nonlinear(x0,x0shMat,xB,Ac,Bc,q0,Q0)
+function [q_c,Q_c]= findControlSet_nonlinear(x0,x0shMat,xB,Ac,Bc,q0,Q0, k_v)
 %clear;
 %load result
 T=10;
@@ -19,16 +19,8 @@ l=l/norm(l);
 %%
 %Compute int G(t,s) from s=0 to t. G(t,s)=e(t-s)A
 % as well as int of sqrt(l'GBQB'G'l)
-N=6; % estimated number of product need to take to find Gint 
-Gtemp=eye(size(Ac))*T;
-for i=1:N
-    mAc=mpower(-Ac,i);
-    if isequal(mAc,zeros(size(Ac)))
-        break
-    end
-    Gtemp=Gtemp+T^(i+1)/factorial(i+1)*mAc;
-end
-Gint=expm(Ac*T)*Gtemp;
+f = @(s) expm(-Ac*s);
+Gint = integral(f,0,T,'ArrayValued',1);
 f= @(s) sqrt(l'*expm(Ac*(T-s))*Bc*Bc'*(expm(Ac*(T-s)))'*l);
 GGint=integral(f,0,T,'ArrayValued',1);
         
@@ -39,7 +31,6 @@ GGint=integral(f,0,T,'ArrayValued',1);
 %    (expm(Ac*T))'*l ))*l'*Gint*Bc;
 fc=( xB'*l - l'*expm(Ac*T)*x0 - sqrt(l'*expm(Ac*T)*x0shMat*...
     (expm(Ac*T))'*l ) );
-k_v=2:1:5;
 for iter=1:length(k_v)
     k=k_v(iter);
 cvx_begin SDP
@@ -49,19 +40,39 @@ cvx_precision high
     variable Q(n,n) semidefinite;
     variable lambda
     lambda > 0
-    fc- GGint(1)*norm(Q,2)-l'*Gint*Bc*q >=0
+    % fc- GGint(1)*norm(Q,2)-l'*Gint*Bc*q >=0
     [1-lambda zeros(1,n) (q-q0)';
         zeros(n,1) lambda*eye(n) Q;
         q-q0 Q Q0] >=0
-    maximize(fc- GGint(1)*norm(Q,2)-l'*Gint*Bc*q + k*log_det(Q))
+    maximize(fc- GGint(1)*norm(Q,2)-l'*Gint(1)*Bc*q + k*log_det(Q))
 cvx_end
-q_c{iter}=q;
-Q_c{iter}=Q'*Q;
 
-%figure(iter)
-%plot(ellipsoid(q,Q'*Q))
-%hold on
-%splot(ellipsoid(q0,Q0),'y')
+f= @(s) sqrt(l'*expm(Ac*(T-s))*Bc*Q0*Bc'*(expm(Ac*(T-s)))'*l);
+GGint=integral(f,0,T,'ArrayValued',1);
+
+cvx_begin SDP
+cvx_quiet false
+cvx_precision high
+    variable q(n)
+    variable r
+    variable lambda
+    lambda > 0
+    r > 0
+    fc- r*GGint(1)-l'*Gint(1)*Bc*q >=0
+    [1-lambda zeros(1,n) (q-q0)';
+        zeros(n,1) lambda*eye(n) r*sqrt(Q0);
+        q-q0 r*sqrt(Q0) Q0] >=0
+    maximize(fc- r*GGint(1)-l'*Gint(1)*Bc*q + k*log_det(r*sqrt(Q0)))
+cvx_end
+r
+
+q_c{iter}=q;
+Q_c{iter}=r^2*Q0;
+
+figure(iter)
+plot(ellipsoid(q_c{iter},Q_c{iter}))
+hold on
+plot(ellipsoid(q0,Q0),'y')
 end
 %%
 return
