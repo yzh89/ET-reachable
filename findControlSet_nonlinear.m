@@ -1,4 +1,4 @@
-function [q_c,Q_c]= findControlSet_nonlinear(x0,x0shMat,xB,Ac,Bc,q0,Q0, k_v)
+function [q_c,Q_c]= findControlSet_nonlinear(x0,x0shMat,xB,Ac,Bc,q0,Q0, k_v, method)
 %clear;
 %load result
 T=10;
@@ -20,59 +20,65 @@ l=l/norm(l);
 %Compute int G(t,s) from s=0 to t. G(t,s)=e(t-s)A
 % as well as int of sqrt(l'GBQB'G'l)
 f = @(s) expm(-Ac*s);
-Gint = integral(f,0,T,'ArrayValued',1);
-f= @(s) sqrt(l'*expm(Ac*(T-s))*Bc*Bc'*(expm(Ac*(T-s)))'*l);
-GGint=integral(f,0,T,'ArrayValued',1);
-        
-%%
-% define SDP
-
-%f = -2*( xB'*l - l'*expm(Ac*T)*x0 - GGint(1) - sqrt(l'*expm(Ac*T)*x0shMat*...
-%    (expm(Ac*T))'*l ))*l'*Gint*Bc;
+Gint = expm(Ac*T)*integral(f,0,T,'ArrayValued',1);
 fc=( xB'*l - l'*expm(Ac*T)*x0 - sqrt(l'*expm(Ac*T)*x0shMat*...
     (expm(Ac*T))'*l ) );
+q_c = cell(size(k_v));
+Q_c = cell(size(k_v));
 for iter=1:length(k_v)
     k=k_v(iter);
-cvx_begin SDP
-cvx_quiet false
-cvx_precision high
-    variable q(n)
-    variable Q(n,n) semidefinite;
-    variable lambda
-    lambda > 0
-    % fc- GGint(1)*norm(Q,2)-l'*Gint*Bc*q >=0
-    [1-lambda zeros(1,n) (q-q0)';
-        zeros(n,1) lambda*eye(n) Q;
-        q-q0 Q Q0] >=0
-    maximize(fc- GGint(1)*norm(Q,2)-l'*Gint(1)*Bc*q + k*log_det(Q))
-cvx_end
-
-f= @(s) sqrt(l'*expm(Ac*(T-s))*Bc*Q0*Bc'*(expm(Ac*(T-s)))'*l);
-GGint=integral(f,0,T,'ArrayValued',1);
-
-cvx_begin SDP
-cvx_quiet false
-cvx_precision high
-    variable q(n)
-    variable r
-    variable lambda
-    lambda > 0
-    r > 0
-    fc- r*GGint(1)-l'*Gint(1)*Bc*q >=0
-    [1-lambda zeros(1,n) (q-q0)';
-        zeros(n,1) lambda*eye(n) r*sqrt(Q0);
-        q-q0 r*sqrt(Q0) Q0] >=0
-    maximize(fc- r*GGint(1)-l'*Gint(1)*Bc*q + k*log_det(r*sqrt(Q0)))
-cvx_end
-r
-
-q_c{iter}=q;
-Q_c{iter}=r^2*Q0;
-
-figure(iter)
-plot(ellipsoid(q_c{iter},Q_c{iter}))
-hold on
-plot(ellipsoid(q0,Q0),'y')
+    % method 1
+    
+    if method == 1
+        f= @(s) sqrt(l'*expm(Ac*(T-s))*(Bc*Bc')*(expm(Ac*(T-s)))'*l);
+        GGint=integral(f,0,T,'ArrayValued',1);
+        
+        cvx_begin SDP
+        cvx_quiet false
+        cvx_precision high
+        variable q(n)
+        variable Q(n,n) semidefinite;
+        variable lambda
+        lambda > 0
+        %fc- GGint(1)*norm(Q,2)-l'*Gint*Bc*q >=0
+        [1-lambda zeros(1,n) (q-q0)';
+            zeros(n,1) lambda*eye(n) Q;
+            q-q0 Q Q0] >=0
+        maximize(fc- GGint(1)*norm(Q,2)-l'*Gint*Bc*q + k*log_det(Q))
+        cvx_end
+        
+        q_c{iter}=q;
+        Q_c{iter}=Q'*Q;
+    elseif method ==2
+        
+        % method 2
+        
+        f= @(s) sqrt(l'*expm(Ac*(T-s))*Bc*Q0*Bc'*(expm(Ac*(T-s)))'*l);
+        GGint=integral(f,0,T,'ArrayValued',1);
+        
+        cvx_begin SDP
+        cvx_quiet false
+        cvx_precision high
+        variable q(n)
+        variable r
+        variable lambda
+        lambda > 0
+        r > 0
+        fc- r*GGint(1)-l'*Gint*Bc*q >=0
+        [1-lambda zeros(1,n) (q-q0)';
+            zeros(n,1) lambda*eye(n) r*sqrt(Q0);
+            q-q0 r*sqrt(Q0) Q0] >=0
+        maximize(fc- r*GGint(1)-l'*Gint*Bc*q + k*log_det(r*sqrt(Q0)))
+        cvx_end
+        q_c{iter}=q;
+        Q_c{iter}=r^2*Q0;
+        
+    end
+    
+    figure
+    plot(ellipsoid(q_c{iter},Q_c{iter}))
+    hold on
+    plot(ellipsoid(q0,Q0),'y')
 end
-%%
-return
+
+end

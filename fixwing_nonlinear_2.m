@@ -64,7 +64,7 @@ else
         
     % reach set
     rsObj_A = elltool.reach.ReachContinuous(lsys_A, x0EllObj_A, dirsMat, timeVec,...
-        'isRegEnabled', true, 'isJustCheck', false, 'regTol', 1e-5);
+        'isRegEnabled', true, 'isJustCheck', false, 'regTol', 1e-6);
     rsObj_B = rsObj_A.getCopy();
     
     % %rsObj_B = elltool.reach.ReachContinuous(lsys, x0EllObj_B, dirsMat, timeVec,...
@@ -108,8 +108,8 @@ plot3(0:0.1:10,x_B_star(:,1)',x_B_star(:,3)','k--');
 %%
 [x0,x0shMat]=x0EllObj_A.double();
 [ctrMat, ttVec] = rsObj_B.get_center();
-xB = [0, zeros(1,4), 2]';
-[qc,Qc]=findControlSet_nonlinear(x0,x0shMat,xB,Ac,Bc,centVec',shMat,100);
+xB = [0, zeros(1,4), 10]';
+[qc,Qc]=findControlSet_nonlinear(x0,x0shMat,xB,Ac,Bc,centVec',shMat,0.1:0.2:0.6, 1);
 
 %%
 iter=1;
