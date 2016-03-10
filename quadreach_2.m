@@ -42,7 +42,7 @@ else
     % initial directions (some random vectors in R^4):
     % dirsMat = [eye(10,10),rand(10,20)];
     %dirsMat=[[eye(3);zeros(7,3)],rand(10,7)];
-    load('qB.mat','dirsMat','uBoundsEllObj_cu');
+    load('dirc.mat','dirsMat');
     % reach set
     rsObj_A = elltool.reach.ReachContinuous(lsys, x0EllObj_A, dirsMat, timeVec,...
         'isRegEnabled', true, 'isJustCheck', false, 'regTol', 1e-7);
