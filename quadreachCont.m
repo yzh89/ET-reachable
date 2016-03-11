@@ -101,10 +101,9 @@ N = 20;
 dt = T/N;
 l = zeros(n,N);
 
-%initialize a sepBall
-d=1;
-sepBall=ellipsoid(zeros(10,1),diag([d^2,d^2,d^2 zeros(1,7)]));
-dirsMatSimple=[[eye(3);zeros(7,3)],rand(10,7)];
+% initialize a sepBall
+% sepBall=ellipsoid(zeros(10,1),diag([d^2,d^2,d^2 zeros(1,7)]));
+% dirsMatSimple=[[eye(3);zeros(7,3)],rand(10,7)];
 
 for k = 1:N
     f = @(s) expm(Ac*(k*dt-s))*Bc*c_U_i;
@@ -113,27 +112,51 @@ for k = 1:N
     l_tmp=[eye(3),zeros(3,n-3);zeros(n-3,n)]*(r_i-r_e);
     l(:,k)=l_tmp/norm(l_tmp);
     
-    tube_i_ea_k=tube_i.cut(k*dt).get_ea;
-    
+%     tube_i_ea_k=tube_i.cut(k*dt).get_ea;
+%     
+% 
+%     for iter=1:length(tube_i_ea_k)
+%         temp=[tube_i_ea_k(iter),sepBall];
+%         tube_i_ea_k_new(iter,:)=temp.minksum_ea(dirsMatSimple);
+%     end
+%     [a_,b_] = size(tube_i_ea_k_new);
+% 
+%     tube_i_ea_k_new=reshape(tube_i_ea_k_new,a_*b_,1);
+%     temp=tube_i_ea_k_new(1);
+%     for iter=1:length(tube_i_ea_k_new)-1
+%         temp=temp.intersection_ea(tube_i_ea_k_new(iter+1));
+%     end
+%     clear extEllipANew;
+%     tube_i_ea_k_new=temp;
+%     
+%     M_i{k} = tube_i_ea_k_new.getShapeMat;
+%     c_i{k} = tube_i_ea_k_new.getCenterVec;
+%     clear tube_i_ea_k_new;
 
-    for iter=1:length(tube_i_ea_k)
-        temp=[tube_i_ea_k(iter),sepBall];
-        tube_i_ea_k_new(iter,:)=temp.minksum_ea(dirsMatSimple);
-    end
-    [a_,b_] = size(tube_i_ea_k_new);
-
-    tube_i_ea_k_new=reshape(tube_i_ea_k_new,a_*b_,1);
-    temp=tube_i_ea_k_new(1);
-    for iter=1:length(tube_i_ea_k_new)-1
-        temp=temp.intersection_ea(tube_i_ea_k_new(iter+1));
-    end
-    clear extEllipANew;
-    tube_i_ea_k_new=temp;
-    
-    M_i{k} = tube_i_ea_k_new.getShapeMat;
-    c_i{k} = tube_i_ea_k_new.getCenterVec;
-    clear tube_i_ea_k_new;
-    
 end
 M_x0 = x0_i.double();
+
+c_i{1}=[1;zeros(9,1)];
+M_i{1}=diag([0.25,0.25,0.25,0,0,0, zeros(1,4)]);
+for i=2:N
+    c_i{i} = [1-0.2*(i-1)*dt;zeros(9,1)];
+    M_i{i} = 1.2*M_i{i-1};
+end
 save('time_varying_function_input','N','T','Ac','Bc','l','M_i','c_i','c_x0','M_x0','c_U','M_U');
+
+[c_U_new, a_U_new]= find_time_varying_control_set(N,T,Ac,Bc,l,c_i,M_i,c_x0,M_x0,c_U,M_U)
+
+timeVec_new = [0,dt];
+
+U_new = ellipsoid(c_U_new(:,1), a_U_new(1)^2*M_U);
+lsys_e_new = elltool.linsys.LinSysContinuous(Ac, Bc, U_new);
+tube_e = elltool.reach.ReachContinuous(lsys_e_new, x0_e, dirsMat, timeVec_new,...
+    'isRegEnabled', true, 'isJustCheck', false, 'regTol', 1e-7);
+
+
+for k=2:N
+    U_new = ellipsoid(c_U_new(:,k), a_U_new(k)^2*M_U);
+    lsys_e_new = elltool.linsys.LinSysContinuous(Ac, Bc, U_new);
+    tube_e = tube_e.evolve(dt*k,lsys_e_new);
+end
+

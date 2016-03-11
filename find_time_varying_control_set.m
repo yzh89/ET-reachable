@@ -1,4 +1,4 @@
-%function [q_c,Q_c]= find_time_varying_control_set(N,T,Ac,Bc,lstar,c_i,M_i,c_x0,M_x0,c_U,M_U)
+function [q,a]= find_time_varying_control_set(N,T,Ac,Bc,lstar,c_i,M_i,c_x0,M_x0,c_U,M_U)
 %n is number of states 
 %m is number of control inputs
 %N is number of time samples
@@ -14,13 +14,6 @@ Psize = [n,m];
 %Intializing  P(i)
 blockP  = cell(N);
 lpMat = cell(N,1);
-
-c_i{1}=[1;zeros(9,1)];
-M_i{1}=diag([0.01,0.01,0.01,0,0,0, zeros(1,4)]);
-for i=2:N
-    c_i{i} = [1-0.2*(i-1)*dt;zeros(9,1)];
-    M_i{i} = 1.05*M_i{i-1};
-end
 
 rIntMat = zeros(N,N);
 for i=1:1:N
@@ -43,9 +36,6 @@ for k=1:1:N
     
 end
 
-
-
-% 
 % function [h_q] = Calculateh(k_hat,Q)
 %     h_q = 0;
 %     for l=1:1:k_hat
@@ -65,6 +55,7 @@ cvx_begin SDP
 cvx_quiet false
 cvx_precision high
 variable q(m,N)
+variable qdiff(m,N-1)
 variable lambda(N,1)
 variable a(N,1)
 a>0.1
@@ -74,13 +65,14 @@ for k =1:1:N
         zeros(m,1),  lambda(k)*eye(m), a(k)*sqrt(M_U);
         q(:,k)-c_U', a(k)*sqrt(M_U),   M_U] >=0
     
-    
     -rIntMat(k,:)*a - sum(diag(lpMat{k}*q))-(lstar(:,k)')*c_i{k} ...
         + sqrt((lstar(:,k)')*M_i{k}*lstar(:,k))-lstar(:,k)'*expm(Ac*k*dt)*c_x0 ...
         - sqrt(lstar(:,k)'*expm(Ac*k*dt)*M_x0*expm(Ac*k*dt)*lstar(:,k)) >0
 end
-minimize(-mu'*a)
+for i=1:1:N-1
+    qdiff(:,i) == q(:,i+1) -q(:,i);
+end
+minimize(-mu'*a + 100*norm(qdiff,'fro'))
 cvx_end
 
-
-%end
+end
