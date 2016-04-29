@@ -1,5 +1,5 @@
 grid off
-title('Reachable Tube in x y space for time interval [0,4]s','FontSize',16)
+title('Reachable Tube in x y space for time interval [0,5]s','FontSize',16)
 hXLabel = xlabel('time');
 hYLabel = ylabel('x (m)');
 hZLabel = zlabel('y (m)');
@@ -15,10 +15,10 @@ set(gca, ...
 
 grid on
 
-axis([0, 4 -3, 5 -5 5])
+axis([0, 5 -15, 15 -15 15])
 
-OptionZ.FrameRate=15;OptionZ.Duration=5.5;OptionZ.Periodic=true;
-CaptureFigVid([-20,10;-110,10;-190,80;-290,10;-380,10], 'testvid',OptionZ)
+%OptionZ.FrameRate=15;OptionZ.Duration=5.5;OptionZ.Periodic=true;
+%CaptureFigVid([-20,10;-110,10;-190,80;-290,10;-380,10], 'testvid',OptionZ)
 %%
 % reachable set
 grid off

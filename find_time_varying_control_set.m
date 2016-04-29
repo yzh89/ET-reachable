@@ -49,7 +49,7 @@ end
 %         g_a = g_a +alpha_hat(l)*integral(r,(l-1)*dt,l*dt,'ArrayValued',1);
 %     end 
 % end
-
+tic
 
 cvx_begin SDP
 cvx_quiet false
@@ -59,14 +59,15 @@ variable qdiff(m,N-1)
 variable lambda(N,1)
 variable a(N,1)
 a>0.1
+
 for k =1:1:N
     lambda(k) > 0
     [1-lambda(k),    zeros(1,m),      (q(:,k)-c_U')';
         zeros(m,1),  lambda(k)*eye(m), a(k)*sqrt(M_U);
         q(:,k)-c_U', a(k)*sqrt(M_U),   M_U] >=0
     
-    -rIntMat(k,:)*a - sum(diag(lpMat{k}*q))-(lstar(:,k)')*c_i{k} ...
-        + sqrt((lstar(:,k)')*M_i{k}*lstar(:,k))-lstar(:,k)'*expm(Ac*k*dt)*c_x0 ...
+    -rIntMat(k,:)*a - sum(diag(lpMat{k}*q))+(lstar(:,k)')*c_i{k} ...
+        - sqrt((lstar(:,k)')*M_i{k}*lstar(:,k))-lstar(:,k)'*expm(Ac*k*dt)*c_x0 ...
         - sqrt(lstar(:,k)'*expm(Ac*k*dt)*M_x0*expm(Ac*k*dt)*lstar(:,k)) >0
 end
 for i=1:1:N-1
@@ -74,5 +75,5 @@ for i=1:1:N-1
 end
 minimize(-mu'*a + 100*norm(qdiff,'fro'))
 cvx_end
-
+toc
 end
